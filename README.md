@@ -1,6 +1,6 @@
-```markdown
-# vehicle_history_blockchain/
+# Vehicle History Blockchain - Local Setup Guide
 
+## Project Structure
 ```
 vehicle_history_blockchain/
 ├── contracts/             ← solidity files
@@ -15,106 +15,104 @@ vehicle_history_blockchain/
 └── ganache-db/            ← persistent chain data (created on first run)
 ```
 
-## Vehicle-History dApp – Local Setup Guide
+## Goal
+Clone the repository, set up Ganache, deploy the smart contract, and run the React front-end on your local machine.
 
-**Goal:** clone the repo, spin up Ganache, deploy the smart-contract and run the React front-end… all on your own machine
-
-### 0 Prerequisites
+## Prerequisites
 
 | Tool         | Tested Version | Why we need it             |
 |--------------|----------------|----------------------------|
 | Node.js      | ≥ 18 LTS (v20.19.1) | JS runtime for Truffle & React |
-| Git          | any            | clone the repo               |
-| Truffle      | 5.12.x         | compile / migrate the contract |
-| Ganache CLI  | 7.x            | local Ethereum chain       |
+| Git          | any            | Clone the repo               |
+| Truffle      | 5.12.x         | Compile/migrate the contract |
+| Ganache CLI  | 7.x            | Local Ethereum chain       |
 
-### Installing the blockchain tools
+## Setup Instructions
+
+### 1. Install Blockchain Tools
 
 ```bash
-# ① globally install Truffle & Ganache-CLI
+# Globally install Truffle & Ganache-CLI
 npm install -g truffle ganache
-ganache --version          # should print something like v7.9.x, if not npm install -g ganache
 
-Inside react folder(client)
-npm install web3
+# Verify installation
+ganache --version    # should print something like v7.9.x
 ```
 
-### 1 Clone the repo
+### 2. Clone the Repository
 
 ```bash
 git clone <your-repo-url>
 cd vehicle_history_blockchain
 ```
 
-### 2 Install JS dependencies
+### 3. Install Dependencies
 
 ```bash
-# root
-cd vehicle_history_blockchain   # project root
+# In project root
 npm install @openzeppelin/contracts
 
-ganache-cli --deterministic --gasLimit 12000000 --allowUnlimitedContractSize
+# In client directory (React app)
+cd client
+npm install web3
+cd ..
 ```
 
-### 3 Start Ganache with a persistent database
-
-We’ll keep the chain data under `ganache-db` so that accounts, balances and contract addresses survive restarts.
+### 4. Start Ganache with Persistent Database
 
 ```bash
-# run this inside the repo root  (NOT inside /client)
+# Run in project root
 npx ganache --port 7545 --mnemonic "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat" --db .\.ganache-db
 ```
 
-**Why those flags?**
+**Configuration Explained:**
 
-| flag            | explanation                                         |
+| Flag            | Purpose                                         |
 |-----------------|-----------------------------------------------------|
-| `--port 7545`   | matches what the React app & Truffle config expect |
-| `--mnemonic …`  | hard-codes the same 10 test accounts for every teammate |
-| `--db ./ganache-db` | folder where chain data blocks will be stored      |
+| `--port 7545`   | Matches what the React app & Truffle config expect |
+| `--mnemonic …`  | Hard-codes the same 10 test accounts for every teammate |
+| `--db ./ganache-db` | Folder where chain data blocks will be stored      |
 
-Keep this terminal tab running.
+*Keep this terminal window running.*
 
-### 4 Compile & Deploy the contract
+### 5. Compile & Deploy the Contract
 
-Open a second terminal (root of the repo):
+Open a second terminal in the project root:
 
 ```bash
 truffle compile
-truffle migrate --reset      # deploys to the Ganache chain running on :7545
+truffle migrate --reset      # Deploys to the Ganache chain running on :7545
 ```
 
-On success you’ll see a contract address (e.g. `0xE7…8Ab`).
+On success, you'll see a contract address (e.g., `0xE7…8Ab`).
 
-### 5 Copy the ABI/artifact to the front-end
-
-React only needs the generated JSON for the `VehicleHistory` contract.
+### 6. Copy Contract Artifacts to Front-end
 
 ```bash
-# still in repo root
+# In project root
 copy build\contracts\VehicleHistory.json client\src\VehicleHistory.json
 ```
 
-### 6 Run the React front-end
+### 7. Run the React Front-end
 
 ```bash
 cd client
 npm start
 ```
 
-CRA opens `http://localhost:3000` in your browser.
+This will open `http://localhost:3000` in your browser.
 
-### 7 (Once-per-chain) grant the service / insurer roles
+### 8. Role Assignment (One-time Setup)
 
 If you kept the default mnemonic, you can skip this step because `migrations/3_grant_demo_roles.js` automatically assigns:
 
 | Role                  | Account       | When          |
 |-----------------------|---------------|---------------|
-| DMV (DEFAULT_ADMIN_ROLE) | `accounts[0]` | on deployment |
-| SERVICE_ROLE          | `accounts[3]` | migration #3  |
-| INSURER_ROLE          | `accounts[0]` (same as DMV for demo) | migration #3  |
+| DMV (DEFAULT_ADMIN_ROLE) | `accounts[0]` | On deployment |
+| SERVICE_ROLE          | `accounts[3]` | Migration #3  |
+| INSURER_ROLE          | `accounts[0]` (same as DMV for demo) | Migration #3  |
 
-If you disabled migration #3 or changed the mnemonic, do:
+If you disabled migration #3 or changed the mnemonic, run:
 
 ```bash
 truffle console
@@ -124,64 +122,64 @@ truffle(development)> await vh.grantRole(await vh.INSURER_ROLE(), accounts[0])
 .exit
 ```
 
-### 8 Workflow after a reboot
+### 9. Workflow After Reboot
 
-* Start Ganache again (same command, same folder → chain resurrects).
-* Compile / migrate only if you changed the Solidity.
-    * Skipping this keeps the existing contract & data.
-* `npm start` inside `/client`.
+1. Start Ganache again (same command, same folder → chain resurrects)
+2. Compile/migrate only if you changed the Solidity code
+   * Skipping this keeps the existing contract & data
+3. Run `npm start` inside `/client`
 
-That’s it — no more Truffle console work unless you need manual role tweaks.
+## Troubleshooting
 
-### 9 Common Errors & Fixes
+### Common Errors & Fixes
 
-| Symptom                               | Likely cause                             | Fix                                                                 |
+| Symptom                               | Likely Cause                             | Fix                                                                 |
 |---------------------------------------|------------------------------------------|---------------------------------------------------------------------|
 | Contract not deployed on this network pop-up | Ganache is on a different chain ID than last time | Delete `ganache-db`, restart Ganache, run `truffle migrate --reset`, copy JSON again |
 | Error: Invalid or empty address       | You left an address box empty or mistyped | Paste a valid `0x…` account from Ganache                             |
-| Transaction “reverted by the EVM”     | Role or VIN pre-check failed in the contract | Check the red message text – it shows the exact `require()` reason |
+| Transaction "reverted by the EVM"     | Role or VIN pre-check failed in the contract | Check the red message text – it shows the exact `require()` reason |
 
-### Testing
+## Testing Guide
 
-#### Who is who in Ganache CLI
+### Account Roles in Ganache
 
-Open the Ganache terminal and copy the first four addresses:
+Get the first 4 accounts from truffle console
 
-| Index | Address prefix | Role we will use                     |
+| Index | Address Prefix | Role                                 |
 |-------|----------------|--------------------------------------|
 | 0     | `0x90F8bf…`    | Deployer – has DMV_ROLE + INSURER_ROLE |
 | 1     | `0xFFcF8F…`    | First owner                          |
 | 2     | `0x6E11BA…`    | New owner after transfer             |
-| 3     | `0x9c5cD9…`    | Service centre (SERVICE_ROLE already granted) |
+| 3     | `0x9c5cD9…`    | Service center (SERVICE_ROLE already granted) |
 
-(your prefix may differ—just keep the same index ordering)
+### Step-by-Step Testing Process
 
-#### Step-by-step in the page
+| Step | Action               | Value to Enter           | Active Sender            |
+|------|----------------------|--------------------------|--------------------------|
+| 1    | Select sender        | `0x90F8bf…` (index 0)    |                          |
+| 2    | VIN field            | `TESTVIN-901`            |                          |
+| 3    | Payload / IPFS       | `ipfs://reg`             |                          |
+| 4    | Owner address        | `0xFFcF8F…` (index 1)    |                          |
+| 5    | Click Register (DMV) |                          | `0x90F8bf…`              |
+| 6    | Click Load History   | (row 0 appears)          |                          |
+| 7    | Change sender        | `0xFFcF8F…` (index 1)    |                          |
+| 8    | New owner address    | `0x6E11BA…` (index 2)    |                          |
+| 9    | Payload              | `doc#A1`                 |                          |
+| 10   | Transfer Ownership   |                          | `0xFFcF8F…`              |
+| 11   | Change sender        | `0x9c5cD9…` (index 3)    |                          |
+| 12   | Payload              | `ipfs://service`         |                          |
+| 13   | Click Add Service    |                          | `0x9c5cD9…`              |
+| 14   | Change sender        | `0x90F8bf…` (index 0)    |                          |
+| 15   | Payload              | `ipfs://accident`        |                          |
+| 16   | Click Add Accident   |                          | `0x90F8bf…`              |
+| 17   | Change sender        | `0x6E11BA…` (index 2)    |                          |
+| 18   | Payload              | `km:123456`              |                          |
+| 19   | Click Add Odometer   |                          | `0x6E11BA…`              |
+| 20   | Click Load History   |                          |                          |
 
-| #  | What you do on the page | Value to type / choose | Sender to pick in Active sender |
-|----|-------------------------|------------------------|--------------------------------|
-| 1  | Select sender           | choose `0x90F8bf…` (index 0) |                                |
-| 2  | VIN field               | `TESTVIN-901`          |                                |
-| 3  | Payload / IPFS          | `ipfs://reg`           |                                |
-| 4  | Owner address           | paste `0xFFcF8F…` (index 1) |                                |
-| 5  | Click Register (DMV)    | —                      | still `0x90F8bf…`              |
-| 6  | Click Load History → row 0 appears | —                      |                                |
-| 7  | Change sender dropdown    | choose `0xFFcF8F…` (index 1) |                                |
-| 8  | New owner address       | `0x6E11BA…` (index 2)  |                                |
-| 9  | Payload (overwrite)     | `doc#A1`               |                                |
-| 10 | Click Transfer Ownership | —                      | sender `0xFFcF8F…`             |
-| 11 | Change sender dropdown    | choose `0x9c5cD9…` (index 3) |                                |
-| 12 | Payload (overwrite)     | `ipfs://service`       |                                |
-| 13 | Click Add Service       | —                      | sender `0x9c5cD9…`             |
-| 14 | Change sender dropdown    | back to `0x90F8bf…` (index 0) |                                |
-| 15 | Payload                 | `ipfs://accident`      |                                |
-| 16 | Click Add Accident      | —                      | sender `0x90F8bf…`             |
-| 17 | Change sender dropdown    | choose `0x6E11BA…` (index 2) |                                |
-| 18 | Payload                 | `km:123456`            |                                |
-| 19 | Click Add Odometer      | —                      | sender `0x6E11BA…`             |
-| 20 | Click Load History      | —                      |                                |
+### Expected Results
 
-You should now see 5 rows:
+After completing the testing process, you should see 5 history entries:
 
 | #  | Type         | Sender        |
 |----|--------------|---------------|
@@ -191,5 +189,4 @@ You should now see 5 rows:
 | 3  | Accident     | `0x90F8bf…`   |
 | 4  | Odometer     | `0x6E11BA…`   |
 
-(timestamps and payloads match what you typed.)
-```
+Timestamps and payloads should match what you entered during testing.
