@@ -1,157 +1,177 @@
-// src/App.js
 import React, { useState, useEffect } from "react";
-import Web3            from "web3";
-import vhAbi           from "./VehicleHistory.json";
-import Landing         from "./Landing";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom"; // Import Router components
+import RolesExplainedPage from "./RolesExplainedPage";
+import Web3           from "web3";
+import vhAbi          from "./VehicleHistory.json";
+import Landing        from "./Landing";
+import { ROLE_MAP }   from "./roles";
+import { signAndSend } from "./txHelper";
 
-/* nice human labels for the enum values in VehicleHistory.sol */
-const RECORD_LABELS = ["Registration", "Transfer", "Service", "Accident", "Odometer"];
+/* enum → friendly labels (must match VehicleHistory.sol) */
+const RECORD_LABELS = [
+  "Registration",
+  "Transfer",
+  "Service",
+  "Accident",
+  "Odometer",
+];
 
+/* ───────────────────────── component ──────────────────────────────── */
 export default function App() {
-  /* ──────────────── state ──────────────── */
-  const [web3,         setWeb3]         = useState();
-  const [accounts,     setAccounts]     = useState([]);
-  const [sender,       setSender]       = useState("");
+  /* basic state */
+  const [web3,     setWeb3]     = useState();
+  const [contract, setContract] = useState(null);
+  const [accounts, setAccounts] = useState([]);
 
-  const [contract,     setContract]     = useState();
+  /* roles (mutable copy of ROLE_MAP) & selected label */
+  const [roleMap,  setRoleMap]  = useState([]);
+  const [senderLbl, setSenderLbl] = useState("");
 
-  const [vin,          setVin]          = useState("");
-  const [ownerAddr,    setOwnerAddr]    = useState("");
-  const [newOwnerAddr, setNewOwnerAddr] = useState("");
-  const [payload,      setPayload]      = useState("");
+  /* form fields */
+  const [vin,      setVin]      = useState("");
+  const [owner,    setOwner]    = useState("");
+  const [newOwner, setNewOwner] = useState("");
+  const [payload,  setPayload]  = useState("");
 
-  const [history,      setHistory]      = useState([]);
-  const [msg,          setMsg]          = useState("");
+  /* data shown */
+  const [history,  setHistory]  = useState([]);
+  const [msg,      setMsg]      = useState("");
 
-  /* ───────── bootstrap : connect to Ganache & contract ───────── */
+  /* ───────── connect Ganache & contract (once) ───────── */
   useEffect(() => {
     (async () => {
       try {
-        const _web3      = new Web3("http://127.0.0.1:7545");          // Ganache default
-        const _accounts  = await _web3.eth.getAccounts();
-        const networkId  = await _web3.eth.net.getId();
-        const deployInfo = vhAbi.networks[networkId];
-        if (!deployInfo) {
-          alert("Contract not deployed on this network.");
-          return;
-        }
-        const _contract  = new _web3.eth.Contract(vhAbi.abi, deployInfo.address);
+        const _web3     = new Web3("http://127.0.0.1:7545");
+        const _accounts = await _web3.eth.getAccounts();
+        const netId     = await _web3.eth.net.getId();
+        const info      = vhAbi.networks[netId];
+        if (!info) { alert("Contract not deployed"); return; }
 
         setWeb3(_web3);
         setAccounts(_accounts);
-        setContract(_contract);
-        setSender(_accounts[0]);   // pick account-0 by default
-      } catch (e) {
-        console.error(e);
-        alert("Failed to connect to Ganache.");
-      }
+        setContract(new _web3.eth.Contract(vhAbi.abi, info.address));
+
+        const rm = structuredClone(ROLE_MAP);
+        setRoleMap(rm);
+        setSenderLbl(rm[0].label);      // DMV by default
+      } catch (e) { console.error(e); alert("Ganache RPC not found"); }
     })();
   }, []);
 
-  /* ───────── reusable validators ───────── */
-  const requireVIN  = () => { if (!vin)  throw new Error("VIN cannot be empty"); };
-  const requireAddr = a  => { if (!web3.utils.isAddress(a)) throw new Error("Invalid / empty address"); };
-
-  /* ───────── helpers to show revert strings nicely ───────── */
-  const showError = (e) => {
+  /* helpers */
+  const labelToAddr = lbl => roleMap.find(r => r.label === lbl)?.addr;
+  const needVIN     = () => { if (!vin) throw new Error("VIN cannot be empty"); };
+  const needAddr    = a  => { if (!web3.utils.isAddress(a)) throw new Error("Bad address"); };
+  const showError   = e  => {
     const m = e.message.match(/reverted(?:.*?:)?\s*(.*?)"}/i);
     setMsg(m ? m[1] : e.message);
   };
 
-  /* ───────── contract-write operations ───────── */
-  const opts = { from: sender, gas: 300_000 };
-
-  async function register() {
+  /* ───────── write operations ───────── */
+  const register = async () => {
     try {
-      requireVIN(); requireAddr(ownerAddr);
-      await contract.methods.registerVehicle(vin, ownerAddr, payload).send(opts);
-      setMsg("✔ Vehicle registered");
-      loadHistory();
+      needVIN(); needAddr(owner);
+      await signAndSend(web3,contract.methods.registerVehicle(vin, owner, payload),contract.options.address);
+
+      setMsg("✔ Vehicle registered"); loadHistory();
     } catch (e) { showError(e); }
-  }
+  };
 
-  async function transfer() {
+  const transfer = async () => {
     try {
-      requireVIN(); requireAddr(newOwnerAddr);
-      await contract.methods.transferOwnership(vin, newOwnerAddr, payload).send(opts);
-      setMsg("✔ Ownership transferred");
-      loadHistory();
+      needVIN(); needAddr(newOwner);
+      await signAndSend(web3, contract.methods.transferOwnership(vin, newOwner, payload),contract.options.address);
+
+      /* update role labels */
+      setRoleMap(prev => prev.map(r =>
+        r.addr === owner   ? { ...r, label:"Ex-Owner" } :
+        r.addr === newOwner? { ...r, label:"Current Owner" } : r
+      ));
+      setMsg("✔ Ownership transferred"); loadHistory();
     } catch (e) { showError(e); }
-  }
+  };
 
-  async function addService()  {
+  const addService  = async () => {
     try {
-      requireVIN();
-      await contract.methods.addServiceRecord  (vin, payload).send(opts);
-      setMsg("✔ Service record added");
-      loadHistory();
+      needVIN();
+      await signAndSend(web3, contract.methods.addServiceRecord(vin, payload),contract.options.address);
+      setMsg("✔ Service record added"); loadHistory();
     } catch (e) { showError(e); }
-  }
+  };
 
-  async function addAccident() {
+  const addAccident = async () => {
     try {
-      requireVIN();
-      await contract.methods.addAccidentRecord (vin, payload).send(opts);
-      setMsg("✔ Accident record added");
-      loadHistory();
+      needVIN();
+      await signAndSend(web3, contract.methods.addAccidentRecord(vin, payload),contract.options.address);
+      setMsg("✔ Accident record added"); loadHistory();
     } catch (e) { showError(e); }
-  }
+  };
 
-  async function addOdometer() {
+  const addOdometer = async () => {
     try {
-      requireVIN();
-      await contract.methods.addOdometerRecord (vin, payload).send(opts);
-      setMsg("✔ Odometer snapshot added");
-      loadHistory();
+      needVIN();
+      await signAndSend(web3, contract.methods.addOdometerRecord(vin, payload),contract.options.address);
+      setMsg("✔ Odometer snapshot added"); loadHistory();
     } catch (e) { showError(e); }
-  }
+  };
 
-  /* ───────── read history ───────── */
-  async function loadHistory() {
+  /* ───────── read operation ───────── */
+  const loadHistory = async () => {
     try {
-      requireVIN();
-      const len   = Number(await contract.methods.historyLength(vin).call());
-      const rows  = [];
+      needVIN();
+      const len  = Number(await contract.methods.historyLength(vin).call());
+      const rows = [];
       for (let i = 0; i < len; i++) {
         const rec = await contract.methods.getRecord(vin, i).call();
         rows.push({
           idx : i,
           type: Number(rec[0]),
-          ts  : Number(rec[1]),
+          ts  : Number(rec[1].toString()),   // avoid BigInt + number mix
           by  : rec[2],
-          data: rec[3]
+          data: rec[3],
         });
       }
       setHistory(rows);
       if (!len) setMsg("No records for that VIN yet");
     } catch (e) { showError(e); }
-  }
+  };
 
-  /* ───────── render ───────── */
-  if (!contract) return <p style={{padding:40}}>Connecting to blockchain…</p>;
+  /* ───────── UI ───────── */
+  if (!contract) return <p style={{padding:40}}>Connecting…</p>;
 
   return (
-    <Landing
-      /* state & setters */
-      accounts={accounts}
-      sender={sender}               setSender={setSender}
-      vin={vin}                     setVin={setVin}
-      ownerAddr={ownerAddr}         setOwnerAddr={setOwnerAddr}
-      newOwnerAddr={newOwnerAddr}   setNewOwnerAddr={setNewOwnerAddr}
-      payload={payload}             setPayload={setPayload}
-      history={history}
-
-      /* actions */
-      onRegister={register}
-      onTransfer={transfer}
-      onService ={addService}
-      onAccident={addAccident}
-      onOdom    ={addOdometer}
-      onLoad    ={loadHistory}
-
-      /* misc */
-      msg={msg}
-      recordLabels={RECORD_LABELS}
-    />
+<Router>
+      <Routes>
+        <Route 
+          path="/" 
+          element={
+            <Landing
+              accounts={accounts}
+              roleMap={roleMap}
+              recordLabels={RECORD_LABELS}
+              sender={senderLbl}            
+              setSender={setSenderLbl}
+              vin={vin}                     
+              setVin={setVin}
+              ownerAddr={owner}             
+              setOwnerAddr={setOwner}
+              newOwnerAddr={newOwner}       
+              setNewOwnerAddr={setNewOwner}
+              payload={payload}             
+              setPayload={setPayload}
+              history={history}
+              onRegister={register}
+              onTransfer={transfer}
+              onService={addService}
+              onAccident={addAccident}
+              onOdom={addOdometer}
+              onLoad={loadHistory}
+              msg={msg}
+            />
+          } 
+        />
+        <Route path="/roles" element={<RolesExplainedPage />} />
+      </Routes>
+    </Router>
   );
 }

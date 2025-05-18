@@ -1,24 +1,784 @@
-/* hero banner */
-.hero            { background:#08224e; color:#fff; padding:32px 24px; position:relative; }
-.hero__inner h1  { margin:0 0 18px 0; line-height:1.1; }
-.hero__search    { display:flex; gap:8px; }
-.hero__search input { padding:6px 8px; width:220px; }
-.hero__search button{ padding:6px 14px; }
+/* ---------- colour tokens ------------------------------------------------ */
+:root {
+  --blue-950: #071b3d;       /* darker background for hover effects */
+  --blue-900: #0c2554;       /* hero background, nav background */
+  --blue-800: #154082;       /* buttons hover */
+  --blue-700: #19407d;       /* table header, active tab */
+  --blue-600: #2656a2;       /* primary button, links */
+  --blue-100: #e9f0ff;       /* light blue bg, tab hover */
+  --grey-050: #f4f6fb;       /* page background */
+  --grey-100: #ebeffa;       /* table row hover, card background */
+  --grey-200: #dde2ee;       /* borders */
+  --grey-300: #c4cbe0;       /* darker borders, subtle text */
+  --grey-400: #9ca8c3;       /* placeholder text */
+  --grey-700: #4a5568;       /* body text */
+  --grey-800: #2d3748;       /* heading text */
+  --good: #18a34a;           /* success messages */
+  --good-bg: #e7f7ee;        /* success bg */
+  --bad: #d93025;            /* error messages */
+  --bad-bg: #fdecea;         /* error bg */
+  --white: #ffffff;
+  --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 3px 8px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.15);
+  --transition: all 0.2s ease-in-out;
+  
+  /* improved typography */
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  color: var(--grey-700); /* Default text color */
+}
 
-.hero__sender    { position:absolute; top:14px; right:24px; display:flex; gap:6px; align-items:center; font-size:14px; }
-.hero__sender select { padding:4px 6px; }
+/* ---------- global styles ------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-/* main action panel */
-.panel        { padding:32px 24px; }
-.panel__row   { margin-bottom:10px; display:flex; gap:8px; }
-.panel input  { padding:6px 8px; flex:1 0 260px; }
-.panel button { padding:6px 12px; }
+body {
+  background: var(--grey-050);
+  line-height: 1.6;
+  font-size: 16px; /* Base font size */
+}
 
-.msg.ok       { color:green; }
-.msg.err      { color:red; }
+h1, h2, h3, h4, h5, h6 {
+  color: var(--grey-800);
+  line-height: 1.3;
+  margin-bottom: 0.75em;
+}
 
-/* history table */
-.history         { border-collapse:collapse; width:100%; max-width:650px; }
-.history th,
-.history td      { border:1px solid #ccc; padding:6px 8px; font-size:14px; }
-.history select  { border:none; background:transparent; font-weight:bold; }
+p {
+  margin-bottom: 1em;
+}
+
+a {
+  color: var(--blue-600);
+  text-decoration: none;
+  transition: var(--transition);
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* Container for the whole app */
+.car-history-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ---------- Main Navigation ------------------------------------------------ */
+.main-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: var(--blue-900);
+  color: var(--white);
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+.nav-link-btn { /* Styling for the Link component to look like a button */
+  background-color: transparent; /* Make it look more like a nav link */
+  color: var(--white);
+  padding: 0.5rem 1rem;
+  box-shadow: none;
+  border: 1px solid var(--blue-700); /* Subtle border */
+  font-weight: 500;
+}
+.nav-link-btn:hover {
+  background-color: var(--blue-800); /* Darker blue on hover */
+  color: var(--white);
+  border-color: var(--blue-600);
+  transform: translateY(0); /* No lift for nav items typically */
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.nav-logo .logo-icon {
+  margin-right: 0.5rem;
+  font-size: 1.8rem; /* Make car icon slightly larger */
+}
+
+.sender-ctl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+}
+
+.sender-ctl label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--grey-100);
+}
+
+.sender-ctl select {
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.15);
+  color: var(--white);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.sender-ctl select:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+.sender-ctl select option {
+  background-color: var(--blue-900); /* Dark background for options for readability */
+  color: var(--white);
+}
+
+
+/* ---------- Hero Section --------------------------------------------------- */
+.hero-section {
+  background: linear-gradient(to right, var(--blue-900), var(--blue-800));
+  color: var(--white);
+  padding: 3rem 2rem 3.5rem; /* Increased padding */
+  text-align: center;
+}
+
+.hero-content h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(2rem, 5vw, 3rem); /* Responsive font size */
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--white);
+}
+
+.hero-content .hero-subtitle {
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  margin-bottom: 2rem;
+  opacity: 0.9;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  color: var(--grey-100);
+}
+
+.search-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* Gap between icon, input, and button */
+  background-color: var(--white);
+  padding: 0.5rem 0.5rem 0.5rem 1rem; /* Padding inside search bar */
+  border-radius: 8px;
+  max-width: 600px;
+  margin: 0 auto;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--grey-300);
+  transition: var(--transition);
+}
+.search-bar-container.focused {
+  box-shadow: 0 0 0 3px rgba(38, 86, 162, 0.3);
+  border-color: var(--blue-600);
+}
+
+.search-icon-prefix {
+  font-size: 1.2rem;
+  color: var(--grey-400);
+  margin-right: 0.5rem; /* Space after icon */
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 0.5rem; /* Adjusted padding */
+  border: none;
+  font-size: 1rem;
+  background-color: transparent; /* Input field transparent */
+  color: var(--grey-800);
+}
+
+.search-input:focus {
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--grey-400);
+  opacity: 1;
+}
+
+/* General Button Style (replaces old .btn) */
+.btn {
+  background: var(--blue-600);
+  color: var(--white);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  display: inline-flex; /* For icon alignment */
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem; /* Space between icon and text in button */
+}
+
+.btn:hover {
+  background: var(--blue-800);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn.search-button { /* Specifics for search button if needed, else .btn is enough */
+  font-size: 1rem; /* Match input font size */
+  padding: 0.65rem 1.25rem; /* Slightly adjusted for search bar context */
+}
+
+
+/* ---------- Main Content Area ---------------------------------------------- */
+.main-content {
+  flex: 1; /* Makes main content take available space */
+  width: 100%;
+  max-width: 1200px; /* Max width for content */
+  margin: 0 auto; /* Center content */
+  padding: 2rem;
+}
+
+/* Card style for data sections */
+.data-card {
+  background: var(--white);
+  margin-top: 2rem; /* Space between cards or sections */
+  margin-bottom: 2rem;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+}
+.data-card h2 {
+  margin-top: 0;
+  border-bottom: 1px solid var(--grey-200);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  color: var(--blue-900);
+}
+
+/* ---------- Tabs ----------------------------------------------------------- */
+.tabs-container {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid var(--grey-200);
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--grey-700);
+  background-color: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tab:hover {
+  color: var(--blue-600);
+  background-color: var(--blue-100);
+  border-bottom-color: var(--blue-600);
+}
+.tab.active {
+  color: var(--blue-700);
+  border-bottom-color: var(--blue-700);
+  font-weight: 700;
+}
+.tab-icon {
+  font-size: 1.1rem;
+}
+
+/* ---------- Record Form Container ------------------------------------------ */
+.record-form-container p {
+  font-size: 0.9rem;
+  color: var(--grey-400);
+  margin-bottom: 1.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, auto)); /* Adjust minmax as needed */
+  gap: 20px; /* Adjust the gap between the grid items */
+  margin-bottom: 30px;
+}
+
+.form-grid > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-grid label {
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-grid input,
+.form-grid textarea {
+  padding: 10px;
+  border: 1px solid var(--grey-300); /* Assuming you have this variable */
+  border-radius: 4px;
+  font-size: 1rem;
+  max-width: 300px; /* Adjust this value to control the width of the inputs */
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--grey-800);
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"], /* If you add number inputs */
+.form-group textarea { /* If you add textareas in this style */
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--grey-300); /* Match search bar border */
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: var(--transition);
+  background-color: var(--white); /* Ensure it's not transparent over colored bg */
+  box-shadow: var(--shadow-sm);
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--blue-600);
+  box-shadow: 0 0 0 3px rgba(38, 86, 162, 0.15);
+}
+
+.form-group input::placeholder {
+  color: var(--grey-400);
+opacity: 1;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem; /* Space above action buttons */
+}
+
+.action-button { /* Extends .btn */
+  justify-content: flex-start; /* Align icon and text to start for list-like feel */
+  padding: 0.7rem 1rem;
+}
+.action-button .action-icon {
+  font-size: 1.1rem;
+}
+
+/* Specific button colors for actions (optional) */
+.action-button.register { background-color: var(--blue-600); }
+.action-button.transfer { background-color: #FF8C00; } /* DarkOrange */
+.action-button.service { background-color: #4682B4; } /* SteelBlue */
+.action-button.accident { background-color: var(--bad); }
+.action-button.odometer { background-color: #20B2AA; } /* LightSeaGreen */
+
+.action-button:hover {
+ filter: brightness(110%);
+}
+
+
+/* ---------- Feedback Message ----------------------------------------------- */
+.feedback-container {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem; /* Consistent spacing */
+}
+.feedback {
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  text-align: center;
+}
+.feedback.good {
+  color: var(--good);
+  background-color: var(--good-bg);
+  border: 1px solid var(--good);
+}
+.feedback.bad {
+  color: var(--bad);
+  background-color: var(--bad-bg);
+  border: 1px solid var(--bad);
+}
+
+/* ---------- Vehicle History / Search Results ------------------------------- */
+.vehicle-history-container { /* This is a .data-card */
+    /* Styles inherited from .data-card */
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem; /* Pushes table down */
+}
+.history-header h2 {
+  margin-bottom: 0; /* Override default h2 margin */
+}
+
+.vin-display {
+  font-size: 0.9rem;
+  background-color: var(--grey-100);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  color: var(--grey-700);
+}
+.vin-display .vin-label {
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+.vin-display .vin-value {
+  font-family: monospace;
+  color: var(--blue-700);
+}
+
+.no-history {
+  text-align: center;
+  padding: 3rem 1rem;
+  background-color: var(--grey-100);
+  border-radius: 8px;
+  border: 1px dashed var(--grey-300);
+}
+.no-history.prompt-search {
+    background-color: var(--blue-100);
+    border-color: var(--blue-600);
+}
+.no-history .no-history-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: var(--grey-400);
+}
+.no-history p {
+  font-size: 1.1rem;
+  color: var(--grey-700);
+  margin-bottom: 1.5rem;
+}
+.no-history .refresh-button { /* Uses .btn styles */
+  background-color: var(--blue-600);
+}
+
+
+/* ---------- History Table -------------------------------------------------- */
+.history-table-wrapper {
+  width: 100%;
+  overflow-x: auto; /* Enable horizontal scrolling on small screens */
+  border: 1px solid var(--grey-200);
+  border-radius: 8px; /* Match card radius */
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse; /* Cleaner look than separate */
+  background: var(--white);
+  font-size: 0.9rem;
+}
+
+.history-table thead {
+  background: var(--blue-700);
+  color: var(--white);
+}
+
+.history-table th {
+  padding: 0.9rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap; /* Prevent headers from wrapping */
+}
+
+.history-table td {
+  padding: 0.9rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--grey-200);
+  vertical-align: middle; /* Align cell content vertically */
+}
+.history-table td .record-icon {
+    margin-right: 0.5rem;
+    font-size: 1.1rem;
+}
+
+/* Styling for specific record types in table rows */
+.record-registration td { border-left: 4px solid #007bff; } /* Blue */
+.record-transfer td { border-left: 4px solid #ffc107; }    /* Yellow */
+.record-service td { border-left: 4px solid #28a745; }     /* Green */
+.record-accident td { border-left: 4px solid var(--bad); }       /* Red */
+.record-odometer td { border-left: 4px solid #17a2b8; }    /* Teal */
+
+
+.history-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.history-table tbody tr:hover {
+  background: var(--grey-100);
+}
+
+.history-table .record-by[title] {
+  cursor: help;
+  border-bottom: 1px dotted var(--grey-300);
+}
+.history-table .record-by[title]:hover {
+  color: var(--blue-700);
+}
+
+/* ---------- App Footer ----------------------------------------------------- */
+.app-footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  background-color: var(--blue-950); /* Darker footer */
+  color: var(--grey-300);
+  margin-top: auto; /* Pushes footer to bottom if content is short */
+}
+.app-footer p {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+.app-footer p:last-child {
+  margin-bottom: 0;
+}
+
+
+/* ---------- Modal Styles (from original CSS, kept for completeness) ------- */
+.pk-modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  backdrop-filter: blur(5px);
+  background: rgba(12, 37, 84, 0.6); /* Slightly darker overlay */
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
+  padding: 1rem; /* Ensure modal card is not stuck to edges on small screens */
+}
+
+.pk-card { /* General modal card */
+  background: var(--white);
+  padding: 1.75rem; /* 28px */
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px; /* Control max width of modal */
+  min-width: 320px; /* Adjusted min-width */
+  display: flex;
+  flex-direction: column;
+  gap: 1rem; /* 16px */
+  box-shadow: var(--shadow-lg);
+  animation: slideIn 0.3s ease-out;
+}
+
+.pk-card h3 { /* Example for modal title */
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    color: var(--blue-900);
+}
+
+.pk-card textarea {
+  width: 100%;
+  resize: vertical; /* Allow vertical resize */
+  font-family: monospace;
+  padding: 0.75rem; /* 12px */
+  border: 1px solid var(--grey-200);
+  border-radius: 6px;
+  min-height: 100px; /* Adjusted */
+  font-size: 0.9rem;
+}
+
+.pk-card textarea:focus {
+  outline: none;
+  border-color: var(--blue-600);
+  box-shadow: 0 0 0 3px rgba(38, 86, 162, 0.15);
+}
+
+.pk-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem; /* 12px */
+  margin-top: 0.5rem;
+}
+.pk-actions .btn { /* Style modal buttons using .btn */
+    padding: 0.6rem 1.2rem; /* Slightly smaller modal buttons */
+}
+.pk-actions .btn-ghost { /* Ghost button style for cancel/secondary actions */
+  border: 1px solid var(--blue-600);
+  color: var(--blue-600);
+  background: var(--white);
+}
+.pk-actions .btn-ghost:hover {
+  background: var(--blue-100);
+  border-color: var(--blue-700);
+  color: var(--blue-800);
+}
+
+
+/* ---------- Animations (from original) ------------------------------------ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ---------- Media Queries for Responsiveness ----------------------------- */
+@media (max-width: 768px) {
+  .main-nav {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+    .nav-links {
+    order: 2; /* Example: put links after logo */
+  }
+  .nav-controls {
+    order: 3;
+    width: 100%;
+  }
+  .sender-ctl {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .sender-ctl select {
+      flex-grow: 1;
+  }
+
+  .hero-section {
+    padding: 2rem 1rem 2.5rem;
+  }
+  .hero-content h1 {
+    font-size: 1.8rem;
+  }
+  .hero-content .hero-subtitle {
+    font-size: 1rem;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+  .data-card, .pk-card {
+    padding: 1.5rem;
+  }
+
+  .tabs-container {
+    gap: 0.25rem;
+    flex-wrap: wrap; /* Allow tabs to wrap */
+  }
+  .tab {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    flex-grow: 1; /* Make tabs take equal width if they wrap */
+    text-align: center;
+    justify-content: center;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr; /* Stack form elements */
+    gap: 1rem;
+  }
+  .action-grid {
+    grid-template-columns: 1fr; /* Stack action buttons */
+  }
+
+  .history-table {
+      font-size: 0.85rem;
+  }
+  .history-table th, .history-table td {
+      padding: 0.75rem 0.5rem;
+  }
+  /* For very small screens, you might want to hide some table columns
+     or use a card-based layout for table rows.
+     This example makes the table cells display as blocks for better readability.
+  */
+}
+
+@media (max-width: 600px) {
+  .search-bar-container {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+  .search-input {
+      width: 100%;
+      text-align: center;
+  }
+  .search-button {
+      width: 100%;
+  }
+  .search-icon-prefix {
+      display: none; /* Hide prefix icon when search bar stacks */
+  }
+
+  /* More aggressive stacking for table on very small screens */
+  .history-table thead {
+    display: none; /* Hide table headers */
+  }
+  .history-table tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid var(--grey-200);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+  }
+  .history-table td {
+    display: block;
+    text-align: right; /* Align text to the right */
+    padding-left: 50%; /* Create space for label */
+    position: relative;
+    border-bottom: 1px solid var(--grey-100); /* Lighter border between "cells" */
+  }
+  .history-table td:last-child {
+      border-bottom: none;
+  }
+  .history-table td::before {
+    content: attr(data-label); /* Use data-label from JSX for pseudo-element */
+    position: absolute;
+    left: 0.5rem;
+    width: calc(50% - 1rem); /* Adjust width */
+    padding-right: 0.5rem;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    color: var(--blue-700);
+  }
+  .record-registration td, .record-transfer td, .record-service td, .record-accident td, .record-odometer td {
+      border-left: none; /* Remove side border when stacked */
+  }
+  .record-registration td:first-child { border-top: 4px solid #007bff; border-radius:6px 6px 0 0;}
+  .record-transfer td:first-child { border-top: 4px solid #ffc107; border-radius:6px 6px 0 0;}
+  .record-service td:first-child { border-top: 4px solid #28a745; border-radius:6px 6px 0 0;}
+  .record-accident td:first-child { border-top: 4px solid var(--bad); border-radius:6px 6px 0 0;}
+  .record-odometer td:first-child { border-top: 4px solid #17a2b8; border-radius:6px 6px 0 0;}
+
+}
