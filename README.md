@@ -11,6 +11,10 @@ vehicle_history_blockchain/
 │       ├── App.js
 │       ├── Landing.jsx
 │       ├── Landing.css
+│       ├── RolesExplainedPage.css
+│       ├── RolesExplainedPage.jsx
+│       ├── roles.js  ← pass adresses and private keys as a dictionary
+│       ├── txHelper.js
 │       └── VehicleHistory.json      ← copied here after migrations
 └── ganache-db/            ← persistent chain data (created on first run)
 ```
@@ -20,12 +24,12 @@ Clone the repository, set up Ganache, deploy the smart contract, and run the Rea
 
 ## Prerequisites
 
-| Tool         | Tested Version | Why we need it             |
-|--------------|----------------|----------------------------|
+| Tool         |   Tested Version    |   Why we need it               |
+|--------------|---------------------|--------------------------------|
 | Node.js      | ≥ 18 LTS (v20.19.1) | JS runtime for Truffle & React |
-| Git          | any            | Clone the repo               |
-| Truffle      | 5.12.x         | Compile/migrate the contract |
-| Ganache CLI  | 7.x            | Local Ethereum chain       |
+| Git          | any                 | Clone the repo                 |
+| Truffle      | 5.12.x              | Compile/migrate the contract   |
+| Ganache CLI  | 7.x                 | Local Ethereum chain           |
 
 ## Setup Instructions
 
@@ -55,6 +59,7 @@ npm install @openzeppelin/contracts
 # In client directory (React app)
 cd client
 npm install web3
+npm install react-router-dom
 cd ..
 ```
 
@@ -109,8 +114,9 @@ If you kept the default mnemonic, you can skip this step because `migrations/3_g
 | Role                  | Account       | When          |
 |-----------------------|---------------|---------------|
 | DMV (DEFAULT_ADMIN_ROLE) | `accounts[0]` | On deployment |
-| SERVICE_ROLE          | `accounts[3]` | Migration #3  |
-| INSURER_ROLE          | `accounts[0]` (same as DMV for demo) | Migration #3  |
+| First Vehicle Owner   | `accounts[1]` | First Registration |
+| SERVICE_ROLE          | `accounts[2]` | Migration #3  |
+| INSURER_ROLE          | `accounts[3]` | Migration #3  |
 
 If you disabled migration #3 or changed the mnemonic, run:
 
@@ -143,50 +149,52 @@ truffle(development)> await vh.grantRole(await vh.INSURER_ROLE(), accounts[0])
 
 ### Account Roles in Ganache
 
-Get the first 4 accounts from truffle console
+Get accounts from truffle console, accounts having indexes 4 up to 9 are potential buyers 
 
 | Index | Address Prefix | Role                                 |
 |-------|----------------|--------------------------------------|
 | 0     | `0x90F8bf…`    | Deployer – has DMV_ROLE + INSURER_ROLE |
 | 1     | `0xFFcF8F…`    | First owner                          |
-| 2     | `0x6E11BA…`    | New owner after transfer             |
-| 3     | `0x9c5cD9…`    | Service center (SERVICE_ROLE already granted) |
+| 2     | `0x9c5cD9…`    | Service center (SERVICE_ROLE)        |
+| 3     | `0xCc5cF6…`    | Insurer (INSURER_ROLE)               |
+| 4     | `0x6E11BA…`    | Potential new owner after transfer   |
+
 
 ### Step-by-Step Testing Process
 
 | Step | Action               | Value to Enter           | Active Sender            |
 |------|----------------------|--------------------------|--------------------------|
-| 1    | Select sender        | `0x90F8bf…` (index 0)    |                          |
+| 1    | Select sender        | `DMV` (index 0)          |                          |
 | 2    | VIN field            | `TESTVIN-901`            |                          |
 | 3    | Payload / IPFS       | `ipfs://reg`             |                          |
 | 4    | Owner address        | `0xFFcF8F…` (index 1)    |                          |
-| 5    | Click Register (DMV) |                          | `0x90F8bf…`              |
+| 5    | Click Register (DMV) |                          | `DMV`                    |
 | 6    | Click Load History   | (row 0 appears)          |                          |
-| 7    | Change sender        | `0xFFcF8F…` (index 1)    |                          |
-| 8    | New owner address    | `0x6E11BA…` (index 2)    |                          |
+| 7    | Change sender        | `Current Owner` (index 1)|                          |
+| 8    | New owner address    | `0x6E11BA…` (index 4)    |                          |
 | 9    | Payload              | `doc#A1`                 |                          |
-| 10   | Transfer Ownership   |                          | `0xFFcF8F…`              |
-| 11   | Change sender        | `0x9c5cD9…` (index 3)    |                          |
+| 10   | Transfer Ownership   |                          | `Current Owner`          |
+| 11   | Change sender        | `Service Shop` (index 2) |                          |
 | 12   | Payload              | `ipfs://service`         |                          |
-| 13   | Click Add Service    |                          | `0x9c5cD9…`              |
-| 14   | Change sender        | `0x90F8bf…` (index 0)    |                          |
+| 13   | Click Add Service    |                          | `Service Shop`           |
+| 14   | Change sender        | `Insurer` (index 3)      |                          |
 | 15   | Payload              | `ipfs://accident`        |                          |
-| 16   | Click Add Accident   |                          | `0x90F8bf…`              |
-| 17   | Change sender        | `0x6E11BA…` (index 2)    |                          |
+| 16   | Click Add Accident   |                          | `Insurer`                |
+| 17   | Change sender        | `New Owner` (index 2)    |                          |
 | 18   | Payload              | `km:123456`              |                          |
-| 19   | Click Add Odometer   |                          | `0x6E11BA…`              |
+| 19   | Click Add Odometer   |                          | `New Owner`              |
 | 20   | Click Load History   |                          |                          |
 
 ### Expected Results
 
 After completing the testing process, you should see 5 history entries:
 
-| #  | Type         | Sender        |
-|----|--------------|---------------|
-| 0  | Registration | `0x90F8bf…`   |
-| 1  | Transfer     | `0xFFcF8F…`   |
-| 2  | Service      | `0x9c5cD9…`   |
-| 3  | Accident     | `0x90F8bf…`   |
-| 4  | Odometer     | `0x6E11BA…`   |
+| #  | Type         | Sender          |
+|----|--------------|-----------------|
+| 0  | Registration | `DMV`           |
+| 1  | Transfer     | `Current Owner` |
+| 2  | Service      | `Service Shop`  |
+| 3  | Accident     | `Insurer`       |
+| 4  | Odometer     | `New Owner`     |
 
 Timestamps and payloads should match what you entered during testing.
